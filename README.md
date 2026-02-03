@@ -106,13 +106,9 @@ Example request:
 ### Repository Structure
 
 ```text
-.
+
 
 ├── workflows/
-├── memory/
-├── api/
-├── deployment/
-├── security/
 └── README.md
 ```
 
