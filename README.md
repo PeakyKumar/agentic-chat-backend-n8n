@@ -107,7 +107,7 @@ Example request:
 
 ```text
 .
-├── architecture/
+
 ├── workflows/
 ├── memory/
 ├── api/
