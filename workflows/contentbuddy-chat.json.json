@@ -1,0 +1,236 @@
+{
+  "name": "My workflow 4",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "93c478a4-d307-4882-9801-30e44b395ede",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        16,
+        64
+      ],
+      "id": "3587d94b-51b6-4a96-8b40-af897125aded",
+      "name": "Webhook",
+      "webhookId": "93c478a4-d307-4882-9801-30e44b395ede"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8e78eb6c-d5d1-4a91-bf8e-15540a830209",
+              "name": "session_id",
+              "value": "={{$json.body.session_id}}",
+              "type": "string"
+            },
+            {
+              "id": "0c5478ca-0892-4b12-a3b3-249311e09d82",
+              "name": "user_message",
+              "value": "={{$json.body.message}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        64
+      ],
+      "id": "eaafdcc3-33f4-43f8-b39c-c11c2133e03e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Conversation so far:\n{{$json.conversation}}\n\nContinue the conversation and respond to the user.\n",
+        "options": {
+          "systemMessage": "You are ContentBuddy, a helpful content creation assistant.\nYou must respect previous conversation context.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        608,
+        80
+      ],
+      "id": "240e7c6a-f72d-4969-b99d-7590a020639c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatCohere",
+      "typeVersion": 1,
+      "position": [
+        480,
+        288
+      ],
+      "id": "3e6c5a15-31fa-4726-8419-07ee0e5003d0",
+      "name": "Cohere Chat Model",
+      "credentials": {
+        "cohereApi": {
+          "id": "0bv3pxboCt9LxGj8",
+          "name": "trial_test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseKey": "reply"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1248,
+        96
+      ],
+      "id": "e0fc28d4-507f-4e6b-8975-266d7ba7323e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sessionId = $json.session_id;\nconst userMessage = $json.user_message;\n\nconst memory = $getWorkflowStaticData('global');\n\n// Initialize session memory if not present\nif (!memory[sessionId]) {\n  memory[sessionId] = [];\n}\n\n// Add user message to memory\nmemory[sessionId].push({\n  role: 'user',\n  content: userMessage,\n});\n\n// Build conversation text for LLM\nconst conversation = memory[sessionId]\n  .map(m => `${m.role.toUpperCase()}: ${m.content}`)\n  .join('\\n');\n\nreturn {\n  session_id: sessionId,\n  conversation,\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        64
+      ],
+      "id": "da885aad-e244-4095-abeb-4c849ba538c1",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        768,
+        288
+      ],
+      "id": "c61ee166-8e5d-4017-befa-ac6dbd0a397f",
+      "name": "Think"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sessionId = $json.session_id;\nconst aiReply =\n  $json.output ||\n  $json.choices?.[0]?.message?.content ||\n  $json.reply;\n\nconst memory = $getWorkflowStaticData('global');\n\n// 🔐 ALWAYS initialize\nif (!memory[sessionId]) {\n  memory[sessionId] = [];\n}\n\n// ✅ Now safe to push\nmemory[sessionId].push({\n  role: 'assistant',\n  content: aiReply,\n});\n\nreturn {\n  reply: aiReply,\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        80
+      ],
+      "id": "5e8cc3cd-b032-4e1c-9638-9c8d610275bf",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cohere Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "3a4c8605-d214-4f5d-8840-b3798d6d3fec",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b273ccfc392ae80a42382cfd0884614af41b87dd7b84f8cffd72e4a789a64ec9"
+  },
+  "id": "SH1cPbOjEQUxlKQqyHscl",
+  "tags": []
+}
